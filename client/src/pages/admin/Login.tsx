@@ -32,7 +32,11 @@ export default function Login() {
   }, [user, setLocation]);
 
   const onSubmit = (values: z.infer<typeof loginSchema>) => {
-    login(values);
+    login(values, {
+      onSuccess: () => {
+        setLocation("/admin/dashboard");
+      }
+    });
   };
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
