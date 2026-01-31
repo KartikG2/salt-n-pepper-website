@@ -1,204 +1,253 @@
 import { useUser, useLogout } from "@/hooks/use-auth";
-import { useAdminOrders, useUpdateOrderStatus, useAdminReservations } from "@/hooks/use-orders";
+import {
+  useAdminOrders,
+  useUpdateOrderStatus,
+  useAdminReservations,
+} from "@/hooks/use-orders";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, LogOut, CheckCircle, Clock, XCircle, Utensils } from "lucide-react";
+import { Loader2, LogOut, CheckCircle, Clock, Volume2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
+
+interface OrderItem {
+  name: string;
+  quantity: number;
+  price: number;
+}
 
 export default function Dashboard() {
   const { data: user, isLoading } = useUser();
   const { mutate: logout } = useLogout();
   const [, setLocation] = useLocation();
-  
   const { data: orders, isLoading: ordersLoading } = useAdminOrders();
-  const { data: reservations, isLoading: reservationsLoading } = useAdminReservations();
+  const { data: reservations, isLoading: reservationsLoading } =
+    useAdminReservations();
   const updateStatus = useUpdateOrderStatus();
 
+  // --- SOUND NOTIFICATION LOGIC ---
+  const prevPendingCount = useRef<number>(0);
+
   useEffect(() => {
-    if (!isLoading && !user) {
-      setLocation("/admin");
+    const pendingOrders = orders?.filter((o) => o.status === "pending") || [];
+    if (pendingOrders.length > prevPendingCount.current) {
+      // Audio works best after a user interaction on the page
+      const audio = new Audio(
+        "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3",
+      );
+      audio
+        .play()
+        .catch(() =>
+          console.log("Sound blocked by browser until user clicks."),
+        );
     }
+    prevPendingCount.current = pendingOrders.length;
+  }, [orders]);
+
+  // --- AUTH REDIRECT ---
+  useEffect(() => {
+    if (!isLoading && !user) setLocation("/admin");
   }, [user, isLoading, setLocation]);
 
-  if (isLoading || !user) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  // --- FIXED DATE HELPER ---
+  // This accepts Date, string, or null to satisfy TypeScript
+  const formatTime = (dateInput?: string | Date | null) => {
+    if (!dateInput) return "N/A";
+    const date =
+      typeof dateInput === "string" ? new Date(dateInput) : dateInput;
+    return isValid(date) ? format(date, "h:mm a") : "N/A";
+  };
+
+  if (isLoading || !user)
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary" />
+      </div>
+    );
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'confirmed': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    const colors: Record<string, string> = {
+      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      confirmed: "bg-blue-100 text-blue-800 border-blue-200",
+      completed: "bg-green-100 text-green-800 border-green-200",
+      cancelled: "bg-red-100 text-red-800 border-red-200",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
   return (
     <div className="min-h-screen bg-muted/10">
-      {/* Header */}
-      <header className="bg-white border-b border-border h-16 flex items-center justify-between px-6">
+      <header className="bg-white border-b border-border h-16 flex items-center justify-between px-6 sticky top-0 z-10">
         <div className="flex items-center gap-2">
-           <h1 className="font-bold text-xl">Admin Dashboard</h1>
-           <Badge variant="outline" className="ml-2">v1.0</Badge>
+          <h1 className="font-bold text-xl">Admin Dashboard</h1>
+          <div className="flex items-center gap-1 text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded ml-2">
+            <Volume2 className="w-3 h-3" /> SOUND ACTIVE
+          </div>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-muted-foreground">Logged in as {user.username}</span>
-          <Button variant="ghost" size="sm" onClick={() => logout()} className="text-destructive hover:bg-destructive/10">
+          <span className="text-sm text-muted-foreground hidden sm:inline">
+            Logged in as{" "}
+            <strong className="text-foreground">{user.username}</strong>
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => logout()}
+            className="text-destructive hover:bg-destructive/10"
+          >
             <LogOut className="w-4 h-4 mr-2" /> Logout
           </Button>
         </div>
       </header>
 
-      <main className="container-custom py-8">
+      <main className="container mx-auto max-w-7xl p-4 md:p-8">
         <Tabs defaultValue="orders" className="space-y-6">
-          <TabsList className="bg-white border p-1 rounded-lg h-auto">
-            <TabsTrigger value="orders" className="px-6 py-2">Live Orders</TabsTrigger>
-            <TabsTrigger value="reservations" className="px-6 py-2">Reservations</TabsTrigger>
+          <TabsList className="bg-white border p-1 rounded-lg">
+            <TabsTrigger value="orders" className="px-6">
+              Live Orders
+            </TabsTrigger>
+            <TabsTrigger value="reservations" className="px-6">
+              Reservations
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="orders" className="space-y-4">
             {ordersLoading ? (
-              <div className="text-center py-20"><Loader2 className="animate-spin mx-auto" /></div>
+              <div className="flex justify-center py-20">
+                <Loader2 className="animate-spin text-primary" />
+              </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Active Orders Column */}
-                <div className="space-y-4">
+                <section className="space-y-4">
                   <h2 className="font-bold text-lg flex items-center gap-2">
                     <Clock className="w-5 h-5 text-yellow-500" /> Active Orders
                   </h2>
                   <ScrollArea className="h-[70vh]">
                     <div className="space-y-4 pr-4">
-                      {orders?.filter(o => o.status === 'pending' || o.status === 'confirmed').map((order) => (
-                        <div key={order.id} className="bg-white p-6 rounded-xl border border-border shadow-sm">
-                          <div className="flex justify-between items-start mb-4">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge className={getStatusColor(order.status!)} variant="outline">
+                      {orders
+                        ?.filter((o) =>
+                          ["pending", "confirmed"].includes(o.status!),
+                        )
+                        .map((order) => (
+                          <div
+                            key={order.id}
+                            className="bg-white p-6 rounded-xl border border-border shadow-sm"
+                          >
+                            <div className="flex justify-between items-start mb-4">
+                              <div>
+                                <Badge
+                                  className={`${getStatusColor(order.status!)} mb-2`}
+                                  variant="outline"
+                                >
                                   {order.status?.toUpperCase()}
                                 </Badge>
-                                <span className="text-xs text-muted-foreground">#{order.id}</span>
+                                <h3 className="font-bold text-lg">
+                                  {order.customerName}
+                                </h3>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase">
+                                  {order.type}
+                                </p>
                               </div>
-                              <h3 className="font-bold">{order.customerName}</h3>
-                              <p className="text-sm text-muted-foreground">{order.type.toUpperCase()}</p>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  {formatTime(order.createdAt)}
+                                </p>
+                                <p className="font-bold text-xl text-primary">
+                                  ₹{order.totalAmount}
+                                </p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                               <p className="text-xs text-muted-foreground mb-1">
-                                 {order.createdAt ? format(new Date(order.createdAt), 'h:mm a') : ''}
-                               </p>
-                               <p className="font-bold text-lg text-primary">₹{order.totalAmount}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="bg-secondary/5 p-4 rounded-lg mb-4 text-sm space-y-2">
-                             {(order.items as any[]).map((item: any, idx: number) => (
-                               <div key={idx} className="flex justify-between">
-                                 <span>{item.quantity}x {item.name}</span>
-                                 <span>₹{item.price * item.quantity}</span>
-                               </div>
-                             ))}
-                          </div>
 
-                          <div className="flex gap-2">
-                            {order.status === 'pending' && (
-                              <Button 
-                                className="w-full bg-blue-600 hover:bg-blue-700" 
+                            <div className="bg-muted/30 p-4 rounded-lg mb-4 text-sm space-y-2">
+                              {(order.items as OrderItem[]).map((item, idx) => (
+                                <div key={idx} className="flex justify-between">
+                                  <span>
+                                    {item.quantity}x {item.name}
+                                  </span>
+                                  <span>₹{item.price * item.quantity}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex gap-2">
+                              <Button
+                                className={`flex-1 ${order.status === "pending" ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700"}`}
                                 size="sm"
-                                onClick={() => updateStatus.mutate({ id: order.id, status: 'confirmed' })}
+                                disabled={updateStatus.isPending}
+                                onClick={() =>
+                                  updateStatus.mutate({
+                                    id: order.id,
+                                    status:
+                                      order.status === "pending"
+                                        ? "confirmed"
+                                        : "completed",
+                                  })
+                                }
                               >
-                                Accept Order
+                                {order.status === "pending"
+                                  ? "Accept"
+                                  : "Complete"}
                               </Button>
-                            )}
-                            {order.status === 'confirmed' && (
-                              <Button 
-                                className="w-full bg-green-600 hover:bg-green-700" 
+                              <Button
+                                variant="outline"
+                                className="flex-1 text-red-600 border-red-200"
                                 size="sm"
-                                onClick={() => updateStatus.mutate({ id: order.id, status: 'completed' })}
+                                disabled={updateStatus.isPending}
+                                onClick={() =>
+                                  updateStatus.mutate({
+                                    id: order.id,
+                                    status: "cancelled",
+                                  })
+                                }
                               >
-                                Mark Completed
+                                Cancel
                               </Button>
-                            )}
-                            <Button 
-                              variant="outline" 
-                              className="w-full text-red-600 border-red-200 hover:bg-red-50" 
-                              size="sm"
-                              onClick={() => updateStatus.mutate({ id: order.id, status: 'cancelled' })}
-                            >
-                              Cancel
-                            </Button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {orders?.filter(o => o.status === 'pending' || o.status === 'confirmed').length === 0 && (
-                        <div className="text-center py-10 text-muted-foreground">No active orders</div>
-                      )}
+                        ))}
                     </div>
                   </ScrollArea>
-                </div>
+                </section>
 
-                {/* Completed Orders Column */}
-                <div className="space-y-4">
+                <section className="space-y-4">
                   <h2 className="font-bold text-lg flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-500" /> Completed Today
+                    <CheckCircle className="w-5 h-5 text-green-500" /> History
                   </h2>
                   <ScrollArea className="h-[70vh]">
-                     <div className="space-y-4 pr-4">
-                      {orders?.filter(o => o.status === 'completed' || o.status === 'cancelled').map((order) => (
-                        <div key={order.id} className="bg-white p-4 rounded-xl border border-border shadow-sm opacity-80">
-                           <div className="flex justify-between items-center">
-                             <div>
-                               <div className="flex items-center gap-2">
-                                <Badge className={getStatusColor(order.status!)} variant="outline">
-                                  {order.status?.toUpperCase()}
-                                </Badge>
-                                <span className="font-medium">#{order.id} • {order.customerName}</span>
-                               </div>
-                               <span className="text-xs text-muted-foreground">
-                                 {order.createdAt ? format(new Date(order.createdAt), 'h:mm a') : ''}
-                               </span>
-                             </div>
-                             <span className="font-bold">₹{order.totalAmount}</span>
-                           </div>
-                        </div>
-                      ))}
-                     </div>
+                    <div className="space-y-3 pr-4">
+                      {orders
+                        ?.filter((o) =>
+                          ["completed", "cancelled"].includes(o.status!),
+                        )
+                        .map((order) => (
+                          <div
+                            key={order.id}
+                            className="bg-white/60 p-4 rounded-xl border flex justify-between items-center"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Badge
+                                className={getStatusColor(order.status!)}
+                                variant="outline"
+                              >
+                                {order.status?.toUpperCase()}
+                              </Badge>
+                              <span className="font-bold text-sm">
+                                {order.customerName}
+                              </span>
+                            </div>
+                            <span className="font-bold">
+                              ₹{order.totalAmount}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
                   </ScrollArea>
-                </div>
+                </section>
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="reservations">
-            <div className="bg-white rounded-xl border border-border p-6">
-              <h2 className="font-bold text-xl mb-6">Upcoming Reservations</h2>
-              {reservationsLoading ? (
-                 <Loader2 className="animate-spin" />
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {reservations?.map((res) => (
-                    <div key={res.id} className="border border-border p-4 rounded-lg bg-card shadow-sm">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-bold">{res.customerName}</h3>
-                          <p className="text-sm text-muted-foreground">{res.customerPhone}</p>
-                        </div>
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700">{res.guests} Guests</Badge>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm font-medium mb-4">
-                        <Clock className="w-4 h-4 text-primary" />
-                        {res.date} at {res.time}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        Status: {res.status}
-                      </div>
-                    </div>
-                  ))}
-                  {reservations?.length === 0 && <div className="text-muted-foreground">No reservations found.</div>}
-                </div>
-              )}
-            </div>
           </TabsContent>
         </Tabs>
       </main>
