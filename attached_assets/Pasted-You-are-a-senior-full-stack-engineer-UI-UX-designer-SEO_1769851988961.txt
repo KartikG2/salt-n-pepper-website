@@ -1,0 +1,209 @@
+You are a senior full-stack engineer, UI/UX designer, SEO specialist, and performance optimizer.
+Build a production-ready, mobile-first, SEO-optimized restaurant website that can be reused and sold to multiple restaurant clients.
+
+🎯 Objective
+
+Create a complete full-stack restaurant website system for “Salt N Papper” with:
+
+Fast loading (<2s)
+
+Clean UI (low decision fatigue)
+
+Online ordering
+
+Table reservations
+
+Admin panel
+
+SEO + Google Maps integration
+All inside Replit, using free-tier friendly tech.
+
+🛠️ Tech Stack (STRICT)
+
+Framework: Next.js (App Router)
+
+Styling: Tailwind CSS
+
+Backend: Next.js API routes
+
+Database: SQLite or Replit DB
+
+Auth: Simple admin login (email + password)
+
+Hosting: Replit native
+
+Images: Local + optimized
+
+Payments: Placeholder (structure ready)
+
+🏪 Business Data (Use Exactly)
+
+Name: Salt N Papper
+
+Type: Vegetarian North Indian Restaurant
+
+Rating: 4.0 ⭐ (255 reviews)
+
+Price Range: ₹200–₹400
+
+Services: Dine-in, Takeaway, No-contact delivery
+
+Address:
+KSRDC Industrial Estate, Hatalgeri Rd, Naka, Gadag-Betageri, Karnataka 582101
+
+Phone: 063629 60692
+
+Hours: Open daily · Closes 11:00 PM
+
+🍽️ Menu (Structured Data)
+
+Create editable menu categories:
+
+Starters: Hara Bara Kabab, Gobi Manchurian, Cheese Balls
+
+Main Course: Paneer Tikka Masala, Paneer Fry
+
+Rice: Veg Fried Rice, Sejwan Fried Rice
+
+Breads: Stuffed Kulcha Naan, Dilli Kulcha Naan, Roti
+
+Desserts: Cake
+
+Menu must be editable from admin panel.
+
+🧱 Pages & Features (MANDATORY)
+1️⃣ Homepage
+
+Hero section with CTA buttons:
+
+Book a Table
+
+Order Online
+
+Short intro text
+
+Popular dishes preview
+
+Google rating badge
+
+Sticky mobile CTA
+
+2️⃣ Menu Page
+
+Card-based layout
+
+Category filters
+
+Mobile-friendly
+
+SEO structured markup
+
+3️⃣ Online Ordering
+
+Add to cart
+
+Customer details form
+
+Order confirmation page
+
+Orders stored in DB
+
+Admin can view orders
+
+4️⃣ Table Reservation
+
+Date & time picker
+
+Store bookings in DB
+
+Admin view
+
+5️⃣ About Us
+
+Story-driven content
+
+Focus on hygiene, taste, family-friendly ambiance
+
+6️⃣ Gallery
+
+Optimized images
+
+Lazy loading
+
+Grid layout
+
+7️⃣ Reviews Section
+
+Static Google review highlights
+
+Trust-building layout
+
+8️⃣ Contact Page
+
+Google Maps embed
+
+Click-to-call button
+
+Operating hours
+
+9️⃣ Admin Panel (/admin)
+
+Login protected
+
+Add/edit/delete menu items
+
+View orders
+
+View reservations
+
+Toggle availability
+
+🔍 SEO REQUIREMENTS
+
+Meta tags for all pages
+
+Open Graph tags
+
+JSON-LD Restaurant schema
+
+Local SEO keywords (Gadag, North Indian restaurant)
+
+Sitemap & robots.txt
+
+⚡ Performance Rules
+
+Mobile-first design
+
+Lazy loading images
+
+Minimal JS
+
+Tailwind best practices
+
+🧩 Architecture Rule (IMPORTANT)
+
+Design the system so it can be reused for other restaurants by changing:
+
+Name
+
+Menu
+
+Address
+
+Phone
+
+Images
+
+Use a config-based approach.
+
+✅ Final Output
+
+Complete folder structure
+
+Fully working frontend & backend
+
+Ready-to-sell restaurant website
+
+Clean, readable, commented code
+
+Build the entire project now.
