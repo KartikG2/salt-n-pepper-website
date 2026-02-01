@@ -11,6 +11,7 @@ import { promisify } from "util";
 
 const scryptAsync = promisify(scrypt);
 
+// === AUTH UTILS ===
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
@@ -29,7 +30,7 @@ export async function registerRoutes(
   app: Express,
 ): Promise<Server> {
   // === PRODUCTION PROXY FIX ===
-  // Required for secure cookies to work behind Replit/Heroku/Nginx proxies
+  // Essential for session cookies to work on Replit HTTPS
   app.set("trust proxy", 1);
 
   // === AUTH SETUP ===
@@ -38,11 +39,9 @@ export async function registerRoutes(
       secret: process.env.SESSION_SECRET || "salt-n-papper-secret",
       resave: false,
       saveUninitialized: false,
-      proxy: true, // Explicitly tell session to trust the proxy
+      proxy: true,
       cookie: {
-        // Secure only in production, but requires 'trust proxy' to be set to 1
         secure: process.env.NODE_ENV === "production",
-        // Lax is standard, but 'none' is often required for Replit production subdomains
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
       },
@@ -95,67 +94,38 @@ export async function registerRoutes(
 
     const categories = await storage.getCategories();
     if (categories.length === 0) {
-      const starters = await storage.createCategory({
+      const cat1 = await storage.createCategory({
         name: "Starters",
         slug: "starters",
         sortOrder: 1,
       });
-      const main = await storage.createCategory({
+      const cat2 = await storage.createCategory({
         name: "Main Course",
         slug: "main-course",
         sortOrder: 2,
       });
-      const rice = await storage.createCategory({
-        name: "Rice",
-        slug: "rice",
-        sortOrder: 3,
-      });
-      const breads = await storage.createCategory({
-        name: "Breads",
-        slug: "breads",
-        sortOrder: 4,
-      });
-      const desserts = await storage.createCategory({
-        name: "Desserts",
-        slug: "desserts",
-        sortOrder: 5,
-      });
 
       await storage.createMenuItem({
-        categoryId: starters.id,
+        categoryId: cat1.id,
         name: "Hara Bara Kabab",
         price: 220,
-        description: "Spinach and green pea patties, deep fried.",
+        description: "Spinach and green pea patties",
         isVegetarian: true,
         isAvailable: true,
         imageUrl:
-          "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&q=80&w=800",
+          "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800",
       });
-      await storage.createMenuItem({
-        categoryId: main.id,
-        name: "Paneer Tikka Masala",
-        price: 280,
-        description: "Grilled paneer cubes in spicy gravy.",
-        isVegetarian: true,
-        isAvailable: true,
-        imageUrl:
-          "https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&q=80&w=800",
-      });
-
-      console.log("Database seeded with initial menu.");
+      console.log("Database seeded.");
     }
   })();
 
-  // === API IMPLEMENTATION ===
-
-  app.get(api.categories.list.path, async (req, res) => {
-    const result = await storage.getCategories();
-    res.json(result);
+  // === PUBLIC API ===
+  app.get(api.categories.list.path, async (_req, res) => {
+    res.json(await storage.getCategories());
   });
 
-  app.get(api.menu.list.path, async (req, res) => {
-    const result = await storage.getMenuItems();
-    res.json(result);
+  app.get(api.menu.list.path, async (_req, res) => {
+    res.json(await storage.getMenuItems());
   });
 
   app.post(api.orders.create.path, async (req, res) => {
@@ -164,9 +134,8 @@ export async function registerRoutes(
       const result = await storage.createOrder(input);
       res.status(201).json(result);
     } catch (err) {
-      if (err instanceof z.ZodError) {
+      if (err instanceof z.ZodError)
         return res.status(400).json({ message: err.errors[0].message });
-      }
       res.status(500).json({ message: "Internal Server Error" });
     }
   });
@@ -177,17 +146,20 @@ export async function registerRoutes(
       const result = await storage.createReservation(input);
       res.status(201).json(result);
     } catch (err) {
-      if (err instanceof z.ZodError) {
+      if (err instanceof z.ZodError)
         return res.status(400).json({ message: err.errors[0].message });
-      }
       res.status(500).json({ message: "Internal Server Error" });
     }
   });
 
-  // Auth Routes
-  app.post(api.admin.login.path, passport.authenticate("local"), (req, res) => {
-    res.json({ message: "Logged in successfully" });
-  });
+  // === AUTH ROUTES ===
+  app.post(
+    api.admin.login.path,
+    passport.authenticate("local"),
+    (_req, res) => {
+      res.json({ message: "Logged in successfully" });
+    },
+  );
 
   app.post(api.admin.logout.path, (req, res) => {
     req.logout((err) => {
@@ -197,17 +169,13 @@ export async function registerRoutes(
   });
 
   app.get(api.admin.me.path, (req, res) => {
-    if (req.isAuthenticated()) {
-      res.json(req.user);
-    } else {
-      res.status(401).send(null);
-    }
+    if (req.isAuthenticated()) res.json(req.user);
+    else res.status(401).send(null);
   });
 
-  // Protected Admin Routes
-  app.get(api.admin.orders.list.path, isAuthenticated, async (req, res) => {
-    const result = await storage.getOrders();
-    res.json(result);
+  // === PROTECTED ADMIN ROUTES ===
+  app.get(api.admin.orders.list.path, isAuthenticated, async (_req, res) => {
+    res.json(await storage.getOrders());
   });
 
   app.patch(
@@ -225,9 +193,8 @@ export async function registerRoutes(
   app.get(
     api.admin.reservations.list.path,
     isAuthenticated,
-    async (req, res) => {
-      const result = await storage.getReservations();
-      res.json(result);
+    async (_req, res) => {
+      res.json(await storage.getReservations());
     },
   );
 

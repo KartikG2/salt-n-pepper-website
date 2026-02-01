@@ -1,8 +1,20 @@
 import { db } from "./db";
 import {
-  users, categories, menuItems, orders, reservations,
-  type User, type Category, type MenuItem, type Order, type Reservation,
-  type InsertUser, type InsertCategory, type InsertMenuItem, type InsertOrder, type InsertReservation
+  users,
+  categories,
+  menuItems,
+  orders,
+  reservations,
+  type User,
+  type Category,
+  type MenuItem,
+  type Order,
+  type Reservation,
+  type InsertUser,
+  type InsertCategory,
+  type InsertMenuItem,
+  type InsertOrder,
+  type InsertReservation,
 } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
@@ -15,7 +27,10 @@ export interface IStorage {
   // Categories
   getCategories(): Promise<(Category & { items: MenuItem[] })[]>;
   createCategory(category: InsertCategory): Promise<Category>;
-  updateCategory(id: number, category: Partial<InsertCategory>): Promise<Category>;
+  updateCategory(
+    id: number,
+    category: Partial<InsertCategory>,
+  ): Promise<Category>;
   deleteCategory(id: number): Promise<void>;
 
   // Menu Items
@@ -26,11 +41,13 @@ export interface IStorage {
 
   // Orders
   getOrders(): Promise<Order[]>;
+  getOrder(id: number): Promise<Order | undefined>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrderStatus(id: number, status: string): Promise<Order>;
 
   // Reservations
   getReservations(): Promise<Reservation[]>;
+  getReservation(id: number): Promise<Reservation | undefined>;
   createReservation(reservation: InsertReservation): Promise<Reservation>;
   updateReservationStatus(id: number, status: string): Promise<Reservation>;
 }
@@ -43,7 +60,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
     return user;
   }
 
@@ -54,22 +74,35 @@ export class DatabaseStorage implements IStorage {
 
   // Categories
   async getCategories(): Promise<(Category & { items: MenuItem[] })[]> {
-    const cats = await db.select().from(categories).orderBy(categories.sortOrder);
+    const cats = await db
+      .select()
+      .from(categories)
+      .orderBy(categories.sortOrder);
     const items = await db.select().from(menuItems);
-    
-    return cats.map(cat => ({
+
+    return cats.map((cat) => ({
       ...cat,
-      items: items.filter(item => item.categoryId === cat.id)
+      items: items.filter((item) => item.categoryId === cat.id),
     }));
   }
 
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
-    const [category] = await db.insert(categories).values(insertCategory).returning();
+    const [category] = await db
+      .insert(categories)
+      .values(insertCategory)
+      .returning();
     return category;
   }
 
-  async updateCategory(id: number, updates: Partial<InsertCategory>): Promise<Category> {
-    const [category] = await db.update(categories).set(updates).where(eq(categories.id, id)).returning();
+  async updateCategory(
+    id: number,
+    updates: Partial<InsertCategory>,
+  ): Promise<Category> {
+    const [category] = await db
+      .update(categories)
+      .set(updates)
+      .where(eq(categories.id, id))
+      .returning();
     return category;
   }
 
@@ -87,8 +120,15 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
-  async updateMenuItem(id: number, updates: Partial<InsertMenuItem>): Promise<MenuItem> {
-    const [item] = await db.update(menuItems).set(updates).where(eq(menuItems.id, id)).returning();
+  async updateMenuItem(
+    id: number,
+    updates: Partial<InsertMenuItem>,
+  ): Promise<MenuItem> {
+    const [item] = await db
+      .update(menuItems)
+      .set(updates)
+      .where(eq(menuItems.id, id))
+      .returning();
     return item;
   }
 
@@ -98,7 +138,13 @@ export class DatabaseStorage implements IStorage {
 
   // Orders
   async getOrders(): Promise<Order[]> {
+    // Ordered by createdAt desc so new orders pop up at the top
     return await db.select().from(orders).orderBy(desc(orders.createdAt));
+  }
+
+  async getOrder(id: number): Promise<Order | undefined> {
+    const [order] = await db.select().from(orders).where(eq(orders.id, id));
+    return order;
   }
 
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
@@ -107,22 +153,50 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateOrderStatus(id: number, status: string): Promise<Order> {
-    const [order] = await db.update(orders).set({ status }).where(eq(orders.id, id)).returning();
+    const [order] = await db
+      .update(orders)
+      .set({ status })
+      .where(eq(orders.id, id))
+      .returning();
     return order;
   }
 
   // Reservations
   async getReservations(): Promise<Reservation[]> {
-    return await db.select().from(reservations).orderBy(desc(reservations.createdAt));
+    // Newest reservations first for easier visibility in the "Table Bookings" tab
+    return await db
+      .select()
+      .from(reservations)
+      .orderBy(desc(reservations.createdAt));
   }
 
-  async createReservation(insertReservation: InsertReservation): Promise<Reservation> {
-    const [reservation] = await db.insert(reservations).values(insertReservation).returning();
+  async getReservation(id: number): Promise<Reservation | undefined> {
+    const [reservation] = await db
+      .select()
+      .from(reservations)
+      .where(eq(reservations.id, id));
     return reservation;
   }
 
-  async updateReservationStatus(id: number, status: string): Promise<Reservation> {
-    const [reservation] = await db.update(reservations).set({ status }).where(eq(reservations.id, id)).returning();
+  async createReservation(
+    insertReservation: InsertReservation,
+  ): Promise<Reservation> {
+    const [reservation] = await db
+      .insert(reservations)
+      .values(insertReservation)
+      .returning();
+    return reservation;
+  }
+
+  async updateReservationStatus(
+    id: number,
+    status: string,
+  ): Promise<Reservation> {
+    const [reservation] = await db
+      .update(reservations)
+      .set({ status })
+      .where(eq(reservations.id, id))
+      .returning();
     return reservation;
   }
 }

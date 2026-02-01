@@ -1,16 +1,17 @@
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  UseQueryOptions,
-} from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
-import { type InsertOrder, type InsertReservation } from "@shared/schema";
+import {
+  type InsertOrder,
+  type InsertReservation,
+  type Order,
+  type Reservation,
+} from "@shared/schema";
 
-// Helper type for optional query settings
+// Helper type for optional query settings (Polling)
 type QueryOptions = { refetchInterval?: number };
 
-// Public Actions
+// --- PUBLIC ACTIONS ---
+
 export function useCreateOrder() {
   return useMutation({
     mutationFn: async (data: InsertOrder) => {
@@ -47,36 +48,39 @@ export function useCreateReservation() {
   });
 }
 
-// Admin Hooks - UPDATED TO SUPPORT REAL-TIME REFETCHING
+// --- ADMIN HOOKS (WITH REAL-TIME SUPPORT) ---
+
 export function useAdminOrders(options?: QueryOptions) {
-  return useQuery({
+  return useQuery<Order[]>({
     queryKey: [api.admin.orders.list.path],
     queryFn: async () => {
       const res = await fetch(api.admin.orders.list.path, {
         credentials: "include",
       });
-      if (res.status === 401) return null;
+      if (res.status === 401) return [];
       if (!res.ok) throw new Error("Failed to fetch orders");
       return api.admin.orders.list.responses[200].parse(await res.json());
     },
-    ...options, // This allows refetchInterval to work
+    ...options, // Spread allows the 5000ms polling from Dashboard
   });
 }
 
 export function useAdminReservations(options?: QueryOptions) {
-  return useQuery({
+  return useQuery<Reservation[]>({
     queryKey: [api.admin.reservations.list.path],
     queryFn: async () => {
       const res = await fetch(api.admin.reservations.list.path, {
         credentials: "include",
       });
-      if (res.status === 401) return null;
+      if (res.status === 401) return [];
       if (!res.ok) throw new Error("Failed to fetch reservations");
       return api.admin.reservations.list.responses[200].parse(await res.json());
     },
-    ...options, // Spread options for real-time refetching
+    ...options, // Spread allows the 5000ms polling from Dashboard
   });
 }
+
+// --- STATUS UPDATE MUTATIONS ---
 
 export function useUpdateOrderStatus() {
   const queryClient = useQueryClient();
@@ -95,6 +99,7 @@ export function useUpdateOrderStatus() {
       );
     },
     onSuccess: () => {
+      // Refresh the orders list immediately after accepting/finishing
       queryClient.invalidateQueries({ queryKey: [api.admin.orders.list.path] });
     },
   });
@@ -117,6 +122,7 @@ export function useUpdateReservationStatus() {
       );
     },
     onSuccess: () => {
+      // Critical for "Diner Fed" logic: refreshes the UI so the confirmed card moves/updates
       queryClient.invalidateQueries({
         queryKey: [api.admin.reservations.list.path],
       });

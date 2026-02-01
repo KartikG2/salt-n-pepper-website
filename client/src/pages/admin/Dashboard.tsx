@@ -19,6 +19,9 @@ import {
   Phone,
   CalendarCheck,
   Users,
+  MapPin,
+  ShoppingBag,
+  Utensils,
   IndianRupee,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -32,11 +35,10 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
 
   // REAL-TIME: Polling both every 5s
-  const { data: orders, isLoading: ordersLoading } = useAdminOrders({
+  const { data: orders } = useAdminOrders({ refetchInterval: 5000 });
+  const { data: reservations } = useAdminReservations({
     refetchInterval: 5000,
   });
-  const { data: reservations, isLoading: reservationsLoading } =
-    useAdminReservations({ refetchInterval: 5000 });
 
   const updateOrderStatus = useUpdateOrderStatus();
   const updateResStatus = useUpdateReservationStatus();
@@ -44,7 +46,7 @@ export default function Dashboard() {
   const prevOrdersCount = useRef<number>(0);
   const prevResCount = useRef<number>(0);
 
-  // Sound Notification for NEW Orders & Reservations
+  // Sound Notification for NEW entries
   useEffect(() => {
     const pendingOrders = orders?.filter((o) => o.status === "pending") || [];
     const pendingRes =
@@ -63,7 +65,7 @@ export default function Dashboard() {
     prevResCount.current = pendingRes.length;
   }, [orders, reservations]);
 
-  // Redirect if not logged in
+  // Auth Protection
   useEffect(() => {
     if (!isLoading && !user) setLocation("/admin");
   }, [user, isLoading, setLocation]);
@@ -90,11 +92,9 @@ export default function Dashboard() {
         }
 
         groups[dateLabel].orders.push(order);
-        // Only count completed orders toward daily revenue
         if (order.status === "completed") {
           groups[dateLabel].totalRevenue += order.totalAmount;
         }
-
         return groups;
       },
       {},
@@ -106,6 +106,41 @@ export default function Dashboard() {
     const date =
       typeof dateInput === "string" ? new Date(dateInput) : dateInput;
     return isValid(date) ? format(date, "h:mm a") : "N/A";
+  };
+
+  // E-RECEIPT GENERATOR
+  const handlePrint = (order: any) => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html>
+        <body style="font-family: 'Courier New', monospace; width: 280px; margin: auto; padding: 10px;">
+          <h2 style="text-align: center; margin-bottom: 5px;">SALT N PAPPER</h2>
+          <hr style="border-top: 1px dashed #000;"/>
+          <p><strong>Order ID:</strong> #${order.id} [${order.type?.toUpperCase()}]</p>
+          <p><strong>Customer:</strong> ${order.customerName}</p>
+          <p><strong>Phone:</strong> ${order.customerPhone}</p>
+          ${order.type === "delivery" ? `<p><strong>Loc:</strong> ${order.customerAddress}</p>` : ""}
+          <hr style="border-top: 1px dashed #000;"/>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            ${(order.items as OrderItem[])
+              .map(
+                (item: any) => `
+              <tr><td>${item.name}</td><td>x${item.quantity}</td><td style="text-align:right">₹${item.price * item.quantity}</td></tr>`,
+              )
+              .join("")}
+          </table>
+          <hr style="border-top: 1px dashed #000;"/>
+          <h3 style="text-align: right;">TOTAL: ₹${order.totalAmount}</h3>
+          <p style="text-align: center; font-size: 10px; margin-top: 20px;">Thank you for dining with us!</p>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
   };
 
   if (isLoading || !user)
@@ -131,7 +166,7 @@ export default function Dashboard() {
           variant="ghost"
           size="sm"
           onClick={() => logout()}
-          className="text-destructive hover:bg-red-50"
+          className="text-destructive"
         >
           <LogOut className="w-4 h-4 mr-2" /> Logout
         </Button>
@@ -140,18 +175,11 @@ export default function Dashboard() {
       <main className="container mx-auto p-4 md:p-8">
         <Tabs defaultValue="queue" className="space-y-6">
           <TabsList className="bg-white border p-1 rounded-lg">
-            <TabsTrigger value="queue" className="flex gap-2">
-              <Clock className="w-4 h-4" /> Orders
-            </TabsTrigger>
-            <TabsTrigger value="reservations" className="flex gap-2">
-              <CalendarCheck className="w-4 h-4" /> Reservations
-            </TabsTrigger>
-            <TabsTrigger value="history" className="flex gap-2">
-              <History className="w-4 h-4" /> Daily History
-            </TabsTrigger>
+            <TabsTrigger value="queue">Orders</TabsTrigger>
+            <TabsTrigger value="reservations">Table Bookings</TabsTrigger>
+            <TabsTrigger value="history">Daily History</TabsTrigger>
           </TabsList>
 
-          {/* ORDERS QUEUE */}
           <TabsContent value="queue">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {orders
@@ -161,29 +189,37 @@ export default function Dashboard() {
                     key={order.id}
                     className="bg-white p-6 rounded-xl border shadow-sm"
                   >
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between items-start mb-2">
                       <Badge
-                        className={
-                          order.status === "pending"
-                            ? "bg-yellow-50 text-yellow-700"
-                            : "bg-blue-600 text-white"
-                        }
+                        variant="outline"
+                        className="uppercase text-[10px]"
                       >
-                        {order.status?.toUpperCase()}
+                        {order.type}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTime(order.createdAt)}
-                      </span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => handlePrint(order)}
+                      >
+                        <Printer className="w-4 h-4" />
+                      </Button>
                     </div>
                     <h3 className="font-bold text-lg">{order.customerName}</h3>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1 mb-4">
-                      <Phone className="w-3 h-3" /> {order.customerPhone}
-                    </p>
-
-                    <div className="space-y-2 mb-4 border-y border-dashed py-3">
-                      {/* FIX: Cast items as OrderItem[] to avoid .map error */}
+                    <div className="flex flex-col gap-1 mt-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Phone className="w-3 h-3" /> {order.customerPhone}
+                      </span>
+                      {order.type === "delivery" && (
+                        <span className="flex items-start gap-1">
+                          <MapPin className="w-3 h-3 mt-0.5" />{" "}
+                          {order.customerAddress}
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1 my-4 border-y border-dashed py-3 text-sm">
                       {(order.items as OrderItem[]).map((item, i) => (
-                        <div key={i} className="flex justify-between text-sm">
+                        <div key={i} className="flex justify-between">
                           <span>
                             {item.quantity}x {item.name}
                           </span>
@@ -209,139 +245,128 @@ export default function Dashboard() {
                     >
                       {order.status === "pending"
                         ? "Accept Order"
-                        : "Complete Order"}
+                        : "Complete & Bill"}
                     </Button>
                   </div>
                 ))}
             </div>
           </TabsContent>
 
-          {/* RESERVATIONS TAB */}
           <TabsContent value="reservations">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {reservations
-                ?.filter((r) => r.status === "pending")
+                ?.filter((r) => ["pending", "confirmed"].includes(r.status!))
                 .map((res) => (
                   <div
                     key={res.id}
-                    className="bg-white p-6 rounded-xl border shadow-sm"
+                    className={`bg-white p-6 rounded-xl border-2 transition-all ${res.status === "confirmed" ? "border-green-500 shadow-md" : "border-transparent shadow-sm"}`}
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-bold text-lg">
                           {res.customerName}
                         </h3>
-                        <p className="text-xs text-muted-foreground">
-                          {res.customerPhone}
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Phone className="w-3 h-3" /> {res.customerPhone}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-primary">
-                          {res.date}
-                        </p>
-                        <p className="text-xs font-medium">{res.time}</p>
-                      </div>
+                      <Badge
+                        className={
+                          res.status === "confirmed"
+                            ? "bg-green-600 text-white"
+                            : "bg-yellow-100 text-yellow-800"
+                        }
+                      >
+                        {res.status === "confirmed" ? "IN-HOUSE" : "PENDING"}
+                      </Badge>
                     </div>
-                    <div className="flex items-center gap-2 mb-4 bg-muted/50 p-2 rounded text-sm">
+                    <div className="bg-muted/50 p-3 rounded-lg mb-4 text-sm font-bold flex gap-2">
+                      <CalendarCheck className="h-4 w-4 text-primary" />{" "}
+                      {res.date} @ {res.time}
+                    </div>
+                    <div className="flex items-center gap-2 mb-4 text-sm font-medium">
                       <Users className="w-4 h-4" /> {res.guests} Guests
                     </div>
-                    <div className="flex gap-2">
-                      <Button
-                        className="flex-1 bg-green-600"
-                        onClick={() =>
-                          updateResStatus.mutate({
-                            id: res.id,
-                            status: "confirmed",
-                          })
-                        }
-                      >
-                        Confirm
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="flex-1 text-red-600"
-                        onClick={() =>
-                          updateResStatus.mutate({
-                            id: res.id,
-                            status: "cancelled",
-                          })
-                        }
-                      >
-                        Decline
-                      </Button>
-                    </div>
+                    <Button
+                      className="w-full"
+                      variant={
+                        res.status === "pending" ? "default" : "secondary"
+                      }
+                      onClick={() =>
+                        updateResStatus.mutate({
+                          id: res.id,
+                          status:
+                            res.status === "pending"
+                              ? "confirmed"
+                              : "completed",
+                        })
+                      }
+                    >
+                      {res.status === "pending"
+                        ? "Confirm Arrival"
+                        : "Diner Fed (Finish)"}
+                    </Button>
                   </div>
                 ))}
             </div>
           </TabsContent>
 
-          {/* GROUPED HISTORY WITH REVENUE */}
           <TabsContent value="history">
-            <ScrollArea className="h-[70vh] pr-4">
-              {Object.keys(groupedHistory).length === 0 ? (
-                <div className="text-center py-20 text-muted-foreground">
-                  No history available yet.
-                </div>
-              ) : (
-                Object.keys(groupedHistory).map((dateLabel) => (
-                  <div key={dateLabel} className="mb-8">
-                    <div className="flex items-center justify-between mb-4 bg-white p-3 rounded-lg border border-primary/20 shadow-sm sticky top-0 z-20">
-                      <span className="text-sm font-bold uppercase tracking-wider text-primary">
-                        {dateLabel}
-                      </span>
-                      <div className="flex items-center gap-2 text-green-700 font-bold bg-green-50 px-3 py-1 rounded-full border border-green-200">
-                        <IndianRupee className="w-4 h-4" />
-                        <span>
-                          Total: ₹{groupedHistory[dateLabel].totalRevenue}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-xl border overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50 border-b">
-                          <tr>
-                            <th className="p-4 text-left">Customer</th>
-                            <th className="p-4 text-left">Status</th>
-                            <th className="p-4 text-right">Earnings</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {groupedHistory[dateLabel].orders.map((order) => (
-                            <tr
-                              key={order.id}
-                              className="border-b last:border-0"
-                            >
-                              <td className="p-4">
-                                <p className="font-bold">
-                                  {order.customerName}
-                                </p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  {formatTime(order.createdAt)}
-                                </p>
-                              </td>
-                              <td className="p-4">
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    order.status === "completed"
-                                      ? "text-green-600 border-green-200 bg-green-50"
-                                      : "text-red-600 border-red-200 bg-red-50"
-                                  }
-                                >
-                                  {order.status?.toUpperCase()}
-                                </Badge>
-                              </td>
-                              <td className="p-4 text-right font-bold">
-                                ₹{order.totalAmount}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+            <ScrollArea className="h-[70vh]">
+              {Object.keys(groupedHistory).map((label) => (
+                <div key={label} className="mb-8">
+                  <div className="flex justify-between items-center mb-4 sticky top-0 bg-muted/90 p-3 rounded-lg border z-20">
+                    <span className="font-bold text-primary uppercase text-xs tracking-widest">
+                      {label}
+                    </span>
+                    <span className="font-bold text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-200">
+                      Revenue: ₹{groupedHistory[label].totalRevenue}
+                    </span>
                   </div>
-                ))
-              )}
+                  <div className="bg-white rounded-xl border overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50 border-b">
+                        <tr>
+                          <th className="p-4 text-left">Customer</th>
+                          <th className="p-4 text-left">Order Info</th>
+                          <th className="p-4 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {groupedHistory[label].orders.map((o: any) => (
+                          <tr
+                            key={o.id}
+                            className="border-b last:border-0 hover:bg-muted/5"
+                          >
+                            <td className="p-4">
+                              <p className="font-bold">{o.customerName}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {o.customerPhone}
+                              </p>
+                            </td>
+                            <td className="p-4">
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] uppercase"
+                              >
+                                {o.type}
+                              </Badge>
+                              {o.type === "delivery" && (
+                                <p className="text-[10px] text-muted-foreground mt-1 truncate max-w-[150px]">
+                                  {o.customerAddress}
+                                </p>
+                              )}
+                            </td>
+                            <td className="p-4 text-right font-bold">
+                              ₹{o.totalAmount}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
             </ScrollArea>
           </TabsContent>
         </Tabs>
