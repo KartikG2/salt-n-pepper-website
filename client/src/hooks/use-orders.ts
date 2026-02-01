@@ -44,7 +44,9 @@ export function useAdminOrders() {
   return useQuery({
     queryKey: [api.admin.orders.list.path],
     queryFn: async () => {
-      const res = await fetch(api.admin.orders.list.path);
+      const res = await fetch(api.admin.orders.list.path, {
+        credentials: 'include',
+      });
       if (res.status === 401) return null;
       if (!res.ok) throw new Error("Failed to fetch orders");
       return api.admin.orders.list.responses[200].parse(await res.json());
@@ -61,6 +63,7 @@ export function useUpdateOrderStatus() {
         method: api.admin.orders.updateStatus.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
+        credentials: 'include',
       });
       if (!res.ok) throw new Error("Failed to update status");
       return api.admin.orders.updateStatus.responses[200].parse(await res.json());
@@ -71,11 +74,33 @@ export function useUpdateOrderStatus() {
   });
 }
 
+export function useUpdateReservationStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const url = buildUrl(api.admin.reservations.updateStatus.path, { id });
+      const res = await fetch(url, {
+        method: api.admin.reservations.updateStatus.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      return api.admin.reservations.updateStatus.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.admin.reservations.list.path] });
+    },
+  });
+}
+
 export function useAdminReservations() {
   return useQuery({
     queryKey: [api.admin.reservations.list.path],
     queryFn: async () => {
-      const res = await fetch(api.admin.reservations.list.path);
+      const res = await fetch(api.admin.reservations.list.path, {
+        credentials: 'include',
+      });
       if (res.status === 401) return null;
       if (!res.ok) throw new Error("Failed to fetch reservations");
       return api.admin.reservations.list.responses[200].parse(await res.json());
