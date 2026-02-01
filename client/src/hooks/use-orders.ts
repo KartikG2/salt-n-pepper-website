@@ -40,7 +40,7 @@ export function useCreateReservation() {
 }
 
 // Admin Hooks
-export function useAdminOrders() {
+export function useAdminOrders(p0: { refetchInterval: number; }p0: { refetchInterval: number; }) {
   return useQuery({
     queryKey: [api.admin.orders.list.path],
     queryFn: async () => {
