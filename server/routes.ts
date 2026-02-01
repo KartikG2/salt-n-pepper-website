@@ -42,8 +42,8 @@ export async function registerRoutes(
       cookie: {
         // Secure only in production, but requires 'trust proxy' to be set to 1
         secure: process.env.NODE_ENV === "production",
-        // Lax is standard for most production environments to balance security and usability
-        sameSite: "lax",
+        // Lax is standard, but 'none' is often required for Replit production subdomains
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: 24 * 60 * 60 * 1000, // 24 hours
       },
     }),
@@ -85,7 +85,6 @@ export async function registerRoutes(
   };
 
   // === SEED DATA ===
-  // (Logic remains the same to ensure admin:admin123 exists)
   (async () => {
     const existingUser = await storage.getUserByUsername("admin");
     if (!existingUser) {
@@ -187,7 +186,6 @@ export async function registerRoutes(
 
   // Auth Routes
   app.post(api.admin.login.path, passport.authenticate("local"), (req, res) => {
-    // Session is established here. 'trust proxy' ensures the cookie is sent back.
     res.json({ message: "Logged in successfully" });
   });
 
@@ -202,7 +200,6 @@ export async function registerRoutes(
     if (req.isAuthenticated()) {
       res.json(req.user);
     } else {
-      // 401 triggers the frontend to show the login page
       res.status(401).send(null);
     }
   });
