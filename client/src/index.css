@@ -11,26 +11,30 @@
 
   --background: 30 20% 98%;
   --foreground: 20 10% 15%;
-  
-  --primary: 15 85% 55%;        /* Warm Red-Orange */
+  --headline: 47 87.46% 48.53%;
+
+  --primary: 15 85% 55%;
+  /* Warm Red-Orange */
   --primary-foreground: 0 0% 98%;
-  
-  --secondary: 142 60% 35%;     /* Fresh Green */
+
+  --secondary: 142 60% 35%;
+  /* Fresh Green */
   --secondary-foreground: 0 0% 98%;
-  
+
   --muted: 30 20% 94%;
   --muted-foreground: 20 10% 45%;
-  
-  --accent: 35 90% 96%;         /* Light Cream/Yellow tint */
+
+  --accent: 35 90% 96%;
+  /* Light Cream/Yellow tint */
   --accent-foreground: 20 10% 15%;
-  
+
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
-  
+
   --border: 30 15% 90%;
   --input: 30 15% 90%;
   --ring: 15 85% 55%;
-  
+
   --card: 0 0% 100%;
   --card-foreground: 20 10% 15%;
 
@@ -41,26 +45,26 @@
   /* Dark mode palette (Rich browns/dark greys) */
   --background: 20 10% 10%;
   --foreground: 30 10% 90%;
-  
+
   --primary: 15 85% 60%;
   --primary-foreground: 0 0% 98%;
-  
+
   --secondary: 142 50% 45%;
   --secondary-foreground: 0 0% 98%;
-  
+
   --muted: 20 10% 15%;
   --muted-foreground: 30 10% 60%;
-  
+
   --accent: 20 10% 15%;
   --accent-foreground: 30 10% 90%;
-  
+
   --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 98%;
-  
+
   --border: 20 10% 20%;
   --input: 20 10% 20%;
   --ring: 15 85% 60%;
-  
+
   --card: 20 10% 12%;
   --card-foreground: 30 10% 90%;
 }
@@ -71,7 +75,16 @@
     font-family: var(--font-sans);
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1 {
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight text-headline;
+  }
+
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     @apply font-bold tracking-tight text-foreground;
   }
@@ -81,7 +94,7 @@
   .btn-primary {
     @apply bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg hover:shadow-primary/25 transition-all duration-300;
   }
-  
+
   .card-hover {
     @apply hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-border/50;
   }
@@ -95,12 +108,15 @@
 ::-webkit-scrollbar {
   width: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   @apply bg-muted-foreground/20 rounded-full;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-muted-foreground/40;
 }
