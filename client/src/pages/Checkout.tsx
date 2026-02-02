@@ -10,11 +10,11 @@ import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Trash2, ArrowLeft, CheckCircle2 } from "lucide-react";
+import { Trash2, ArrowLeft, CheckCircle2, ShoppingBag } from "lucide-react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-// Form Schema
+// Form Schema remains the same
 const checkoutSchema = z.object({
   customerName: z.string().min(2, "Name is required"),
   customerPhone: z.string().min(10, "Valid phone number required"),
@@ -52,11 +52,13 @@ export default function Checkout() {
     try {
       await createOrder.mutateAsync({
         ...values,
+        // UPDATED: Now mapping portion information into the order items
         items: items.map(i => ({
           menuItemId: i.id,
           name: i.name,
-          price: i.price,
-          quantity: i.quantity
+          price: i.selectedPrice, // Uses the specific price for that portion
+          quantity: i.quantity,
+          portion: i.portion // Sends 'full', 'half', or 'quarter'
         })),
         totalAmount: total,
       });
@@ -66,7 +68,7 @@ export default function Checkout() {
         description: "We have received your order. We'll contact you shortly.",
         duration: 5000,
       });
-      
+
       clearCart();
       setLocation("/");
     } catch (error) {
@@ -98,50 +100,57 @@ export default function Checkout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
-      
+
       <div className="flex-1 py-12 bg-secondary/5">
         <div className="container-custom">
-          <Button variant="ghost" className="mb-8 pl-0 hover:bg-transparent hover:text-primary" onClick={() => setLocation("/menu")}>
+          <Button variant="ghost" className="mb-8 pl-0 hover:bg-transparent hover:text-primary transition-colors" onClick={() => setLocation("/menu")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Menu
           </Button>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-            
+
             {/* Cart Items */}
             <div className="space-y-6">
               <h2 className="text-2xl font-bold font-display">Order Summary</h2>
               <div className="bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
                 <div className="p-6 space-y-6">
                   {items.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between gap-4">
+                    // Updated Key to include portion to handle multiple portions of the same item
+                    <div key={`${item.id}-${item.portion}`} className="flex items-center justify-between gap-4 animate-in fade-in duration-300">
                       <div className="flex items-center gap-4 flex-1">
                         {item.imageUrl && (
-                          <img src={item.imageUrl} alt={item.name} className="w-16 h-16 rounded-lg object-cover bg-secondary/10" />
+                          <img src={item.imageUrl} alt={item.name} className="w-16 h-16 rounded-lg object-cover bg-secondary/10 border border-border/50" />
                         )}
                         <div>
                           <h4 className="font-bold text-sm md:text-base">{item.name}</h4>
-                          <p className="text-primary font-bold">₹{item.price}</p>
+                          {/* UPDATED: Clear labeling of the portion size */}
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Badge variant="secondary" className="text-[10px] uppercase font-bold px-1.5 h-4">
+                              {item.portion}
+                            </Badge>
+                            <p className="text-primary font-bold text-sm">₹{item.selectedPrice}</p>
+                          </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center bg-secondary/10 rounded-lg h-9">
+                        <div className="flex items-center bg-secondary/10 rounded-lg h-9 border border-secondary/10">
                           <button 
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="w-8 h-full flex items-center justify-center hover:bg-secondary/20 rounded-l-lg transition-colors"
+                            onClick={() => updateQuantity(item.id, item.quantity - 1, item.portion)}
+                            className="w-8 h-full flex items-center justify-center hover:bg-secondary/20 rounded-l-lg transition-colors font-bold"
                           >
                             -
                           </button>
                           <span className="w-8 text-center text-sm font-bold">{item.quantity}</span>
                           <button 
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="w-8 h-full flex items-center justify-center hover:bg-secondary/20 rounded-r-lg transition-colors"
+                            onClick={() => updateQuantity(item.id, item.quantity + 1, item.portion)}
+                            className="w-8 h-full flex items-center justify-center hover:bg-secondary/20 rounded-r-lg transition-colors font-bold"
                           >
                             +
                           </button>
                         </div>
                         <button 
-                          onClick={() => removeItem(item.id)}
+                          onClick={() => removeItem(item.id, item.portion)}
                           className="text-muted-foreground hover:text-destructive transition-colors p-2"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -153,7 +162,7 @@ export default function Checkout() {
                 <div className="bg-secondary/5 p-6 border-t border-border">
                   <div className="flex justify-between items-center text-lg font-bold">
                     <span>Total Amount</span>
-                    <span className="text-primary text-2xl">₹{total}</span>
+                    <span className="text-primary text-2xl font-display">₹{total}</span>
                   </div>
                 </div>
               </div>
@@ -165,40 +174,40 @@ export default function Checkout() {
               <div className="bg-card rounded-2xl shadow-sm border border-border p-6 md:p-8">
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    
+
                     <FormField
                       control={form.control}
                       name="type"
                       render={({ field }) => (
                         <FormItem className="space-y-3">
-                          <FormLabel>Order Type</FormLabel>
+                          <FormLabel className="font-bold">How will you receive your food?</FormLabel>
                           <FormControl>
                             <RadioGroup
                               onValueChange={field.onChange}
                               defaultValue={field.value}
-                              className="flex flex-col space-y-1"
+                              className="grid grid-cols-1 gap-2"
                             >
-                              <FormItem className="flex items-center space-x-3 space-y-0 p-3 border rounded-xl hover:bg-secondary/5 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-colors">
+                              <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-xl hover:bg-secondary/5 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
                                 <FormControl>
                                   <RadioGroupItem value="takeaway" />
                                 </FormControl>
-                                <FormLabel className="font-normal cursor-pointer flex-1">
+                                <FormLabel className="font-semibold cursor-pointer flex-1">
                                   Takeaway / Pickup
                                 </FormLabel>
                               </FormItem>
-                              <FormItem className="flex items-center space-x-3 space-y-0 p-3 border rounded-xl hover:bg-secondary/5 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-colors">
+                              <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-xl hover:bg-secondary/5 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
                                 <FormControl>
                                   <RadioGroupItem value="delivery" />
                                 </FormControl>
-                                <FormLabel className="font-normal cursor-pointer flex-1">
+                                <FormLabel className="font-semibold cursor-pointer flex-1">
                                   Home Delivery
                                 </FormLabel>
                               </FormItem>
-                              <FormItem className="flex items-center space-x-3 space-y-0 p-3 border rounded-xl hover:bg-secondary/5 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-colors">
+                              <FormItem className="flex items-center space-x-3 space-y-0 p-4 border rounded-xl hover:bg-secondary/5 cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
                                 <FormControl>
                                   <RadioGroupItem value="dine-in" />
                                 </FormControl>
-                                <FormLabel className="font-normal cursor-pointer flex-1">
+                                <FormLabel className="font-semibold cursor-pointer flex-1">
                                   Dine In (Pre-order)
                                 </FormLabel>
                               </FormItem>
@@ -215,9 +224,9 @@ export default function Checkout() {
                         name="customerName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Full Name</FormLabel>
+                            <FormLabel className="font-bold">Full Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter your name" {...field} className="h-12" />
+                              <Input placeholder="Enter your name" {...field} className="h-12 bg-muted/30 border-border/50" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -229,9 +238,9 @@ export default function Checkout() {
                         name="customerPhone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone Number</FormLabel>
+                            <FormLabel className="font-bold">Phone Number</FormLabel>
                             <FormControl>
-                              <Input placeholder="10-digit mobile number" {...field} className="h-12" />
+                              <Input placeholder="10-digit mobile number" {...field} className="h-12 bg-muted/30 border-border/50" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -244,10 +253,10 @@ export default function Checkout() {
                         control={form.control}
                         name="customerAddress"
                         render={({ field }) => (
-                          <FormItem className="animate-in slide-in-from-top-2">
-                            <FormLabel>Delivery Address</FormLabel>
+                          <FormItem className="animate-in slide-in-from-top-2 duration-300">
+                            <FormLabel className="font-bold">Delivery Address</FormLabel>
                             <FormControl>
-                              <Textarea placeholder="Complete address with landmarks" {...field} className="min-h-[100px]" />
+                              <Textarea placeholder="Complete address with landmarks in Gadag" {...field} className="min-h-[100px] bg-muted/30 border-border/50" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -258,13 +267,13 @@ export default function Checkout() {
                     <Button 
                       type="submit" 
                       size="lg" 
-                      className="w-full h-14 text-lg mt-4" 
+                      className="w-full h-14 text-lg mt-4 font-bold shadow-lg shadow-primary/20 transition-all hover:scale-[1.01] active:scale-[0.99]" 
                       disabled={createOrder.isPending}
                     >
                       {createOrder.isPending ? (
-                        <>Processing...</>
+                        <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Processing Order...</>
                       ) : (
-                        <>Place Order <CheckCircle2 className="ml-2 h-5 w-5" /></>
+                        <>Confirm Order <CheckCircle2 className="ml-2 h-5 w-5" /></>
                       )}
                     </Button>
                   </form>

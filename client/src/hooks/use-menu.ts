@@ -1,9 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
-import { categories, menuItems, type InsertCategory, type InsertMenuItem } from "@shared/schema";
+import {
+  type InsertCategory,
+  type InsertMenuItem,
+  type MenuItem,
+  type Category,
+} from "@shared/schema";
 
-// Public Hooks
-export function useCategories() {
+// --- PUBLIC HOOKS ---
+
+// Fixed: Added options parameter to accept refetchInterval
+export function useCategories(options?: { refetchInterval?: number }) {
   return useQuery({
     queryKey: [api.categories.list.path],
     queryFn: async () => {
@@ -11,10 +18,12 @@ export function useCategories() {
       if (!res.ok) throw new Error("Failed to fetch categories");
       return api.categories.list.responses[200].parse(await res.json());
     },
+    ...options, // Spreads options like refetchInterval
   });
 }
 
-export function useMenuItems() {
+// Fixed: Added options parameter to accept refetchInterval
+export function useMenuItems(options?: { refetchInterval?: number }) {
   return useQuery({
     queryKey: [api.menu.list.path],
     queryFn: async () => {
@@ -22,22 +31,11 @@ export function useMenuItems() {
       if (!res.ok) throw new Error("Failed to fetch menu items");
       return api.menu.list.responses[200].parse(await res.json());
     },
+    ...options, // Spreads options like refetchInterval
   });
 }
 
-// Admin Hooks
-export function useAdminCategories() {
-  return useQuery({
-    queryKey: [api.categories.list.path, 'admin'],
-    queryFn: async () => {
-      const res = await fetch(api.categories.list.path);
-      if (!res.ok) throw new Error("Failed to fetch categories");
-      // Re-using public endpoint for now as it contains same data structure
-      return api.categories.list.responses[200].parse(await res.json());
-    },
-  });
-}
-
+// --- ADMIN HOOKS ---
 
 export function useCreateMenuItem() {
   const queryClient = useQueryClient();
@@ -53,7 +51,30 @@ export function useCreateMenuItem() {
       return api.admin.menuItems.create.responses[201].parse(await res.json());
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.menu.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.categories.list.path] });
+    },
+  });
+}
+
+export function useUpdateMenuItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...data
+    }: Partial<InsertMenuItem> & { id: number }) => {
+      const url = buildUrl(api.admin.menuItems.update.path, { id });
+      const res = await fetch(url, {
+        method: api.admin.menuItems.update.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update item");
+      return api.admin.menuItems.update.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.menu.list.path] });
     },
   });
@@ -64,14 +85,13 @@ export function useDeleteMenuItem() {
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.admin.menuItems.delete.path, { id });
-      const res = await fetch(url, { 
+      const res = await fetch(url, {
         method: api.admin.menuItems.delete.method,
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to delete item");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.categories.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.menu.list.path] });
     },
   });
@@ -96,12 +116,35 @@ export function useCreateCategory() {
   });
 }
 
+export function useUpdateCategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...data
+    }: Partial<InsertCategory> & { id: number }) => {
+      const url = buildUrl(api.admin.categories.update.path, { id });
+      const res = await fetch(url, {
+        method: api.admin.categories.update.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update category");
+      return api.admin.categories.update.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.categories.list.path] });
+    },
+  });
+}
+
 export function useDeleteCategoryAdmin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
       const url = buildUrl(api.admin.categories.delete.path, { id });
-      const res = await fetch(url, { 
+      const res = await fetch(url, {
         method: api.admin.categories.delete.method,
         credentials: "include",
       });
@@ -109,6 +152,7 @@ export function useDeleteCategoryAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.categories.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.menu.list.path] });
     },
   });
 }

@@ -116,6 +116,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMenuItem(insertItem: InsertMenuItem): Promise<MenuItem> {
+    // Ensures the 'prices' JSONB object is stored correctly
     const [item] = await db.insert(menuItems).values(insertItem).returning();
     return item;
   }
@@ -124,6 +125,7 @@ export class DatabaseStorage implements IStorage {
     id: number,
     updates: Partial<InsertMenuItem>,
   ): Promise<MenuItem> {
+    // Handles the partial update for name, description, or the portion 'prices' object
     const [item] = await db
       .update(menuItems)
       .set(updates)
@@ -138,7 +140,6 @@ export class DatabaseStorage implements IStorage {
 
   // Orders
   async getOrders(): Promise<Order[]> {
-    // Ordered by createdAt desc so new orders pop up at the top
     return await db.select().from(orders).orderBy(desc(orders.createdAt));
   }
 
@@ -163,7 +164,6 @@ export class DatabaseStorage implements IStorage {
 
   // Reservations
   async getReservations(): Promise<Reservation[]> {
-    // Newest reservations first for easier visibility in the "Table Bookings" tab
     return await db
       .select()
       .from(reservations)

@@ -31,7 +31,8 @@ export const menuItems = pgTable("menu_items", {
   categoryId: integer("category_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
-  price: integer("price").notNull(), // In INR
+  // CHANGED: Now using JSONB to store { full: number, half?: number, quarter?: number }
+  prices: jsonb("prices").notNull(),
   imageUrl: text("image_url"),
   isVegetarian: boolean("is_vegetarian").default(true),
   isAvailable: boolean("is_available").default(true),
@@ -75,10 +76,13 @@ export const categoriesRelations = relations(categories, ({ many }) => ({
 
 // === SCHEMAS & TYPES ===
 
-// Create insert schemas using drizzle-zod
 export const insertUserSchema = createInsertSchema(users);
 export const insertCategorySchema = createInsertSchema(categories);
-export const insertMenuItemSchema = createInsertSchema(menuItems);
+
+// Updated Insert Schema for Menu Items
+export const insertMenuItemSchema = createInsertSchema(menuItems).omit({
+  id: true,
+});
 
 export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,
@@ -92,23 +96,31 @@ export const insertReservationSchema = createInsertSchema(reservations).omit({
   status: true,
 });
 
-// SELECT TYPES
+// Select Types
 export type User = typeof users.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type Reservation = typeof reservations.$inferSelect;
 
-// INSERT TYPES - FIXING THE STORAGE.TS ERRORS
+// Insert Types
 export type InsertUser = typeof users.$inferInsert;
 export type InsertCategory = typeof categories.$inferInsert;
-export type InsertMenuItem = typeof menuItems.$inferInsert;
+export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type InsertReservation = z.infer<typeof insertReservationSchema>;
 
-// Helper interface for items inside JSONB
+// Portions TypeScript helper
+export interface ItemPrices {
+  full: number;
+  half?: number;
+  quarter?: number;
+}
+
+// Updated OrderItem to include portion info
 export interface OrderItem {
   name: string;
   quantity: number;
   price: number;
+  portion: "full" | "half" | "quarter";
 }

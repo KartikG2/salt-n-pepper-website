@@ -8,6 +8,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
+import { type ItemPrices } from "@shared/schema";
 
 const scryptAsync = promisify(scrypt);
 
@@ -29,8 +30,6 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express,
 ): Promise<Server> {
-  // === PRODUCTION PROXY FIX ===
-  // Essential for session cookies to work on Replit HTTPS
   app.set("trust proxy", 1);
 
   // === AUTH SETUP ===
@@ -43,7 +42,7 @@ export async function registerRoutes(
       cookie: {
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        maxAge: 24 * 60 * 60 * 1000,
       },
     }),
   );
@@ -56,11 +55,9 @@ export async function registerRoutes(
       try {
         const user = await storage.getUserByUsername(username);
         if (!user) return done(null, false, { message: "Incorrect username." });
-
         const isValid = await comparePassword(password, user.password);
         if (!isValid)
           return done(null, false, { message: "Incorrect password." });
-
         return done(null, user);
       } catch (err) {
         return done(err);
@@ -83,13 +80,12 @@ export async function registerRoutes(
     res.status(401).json({ message: "Unauthorized" });
   };
 
-  // === SEED DATA ===
+  // === SEED DATA UPDATED FOR PORTIONS ===
   (async () => {
     const existingUser = await storage.getUserByUsername("admin");
     if (!existingUser) {
       const hashedPassword = await hashPassword("admin123");
       await storage.createUser({ username: "admin", password: hashedPassword });
-      console.log("Admin user created: admin / admin123");
     }
 
     const categories = await storage.getCategories();
@@ -99,23 +95,20 @@ export async function registerRoutes(
         slug: "starters",
         sortOrder: 1,
       });
-      const cat2 = await storage.createCategory({
-        name: "Main Course",
-        slug: "main-course",
-        sortOrder: 2,
-      });
 
+      // Updated seed data to use the 'prices' object instead of a single 'price'
       await storage.createMenuItem({
         categoryId: cat1.id,
-        name: "Hara Bara Kabab",
-        price: 220,
-        description: "Spinach and green pea patties",
+        name: "Paneer Tikka",
+        // Using the new JSONB structure
+        prices: { full: 280, half: 160, quarter: 90 } as ItemPrices,
+        description: "Charcoal grilled cottage cheese",
         isVegetarian: true,
         isAvailable: true,
         imageUrl:
-          "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=800",
+          "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800",
       });
-      console.log("Database seeded.");
+      console.log("Database seeded with portion data.");
     }
   })();
 
@@ -132,18 +125,6 @@ export async function registerRoutes(
     try {
       const input = api.orders.create.input.parse(req.body);
       const result = await storage.createOrder(input);
-      res.status(201).json(result);
-    } catch (err) {
-      if (err instanceof z.ZodError)
-        return res.status(400).json({ message: err.errors[0].message });
-      res.status(500).json({ message: "Internal Server Error" });
-    }
-  });
-
-  app.post(api.reservations.create.path, async (req, res) => {
-    try {
-      const input = api.reservations.create.input.parse(req.body);
-      const result = await storage.createReservation(input);
       res.status(201).json(result);
     } catch (err) {
       if (err instanceof z.ZodError)
@@ -174,6 +155,47 @@ export async function registerRoutes(
   });
 
   // === PROTECTED ADMIN ROUTES ===
+
+  // NEW: Update existing menu item (The "Edit" functionality)
+  app.patch(
+    api.admin.menuItems.update.path,
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const result = await storage.updateMenuItem(
+          Number(req.params.id),
+          req.body,
+        );
+        res.json(result);
+      } catch (err) {
+        res.status(500).json({ message: "Failed to update item" });
+      }
+    },
+  );
+
+  // Create new menu item
+  app.post(
+    api.admin.menuItems.create.path,
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const result = await storage.createMenuItem(req.body);
+        res.status(201).json(result);
+      } catch (err) {
+        res.status(500).json({ message: "Failed to create item" });
+      }
+    },
+  );
+
+  app.delete(
+    api.admin.menuItems.delete.path,
+    isAuthenticated,
+    async (req, res) => {
+      await storage.deleteMenuItem(Number(req.params.id));
+      res.sendStatus(204);
+    },
+  );
+
   app.get(api.admin.orders.list.path, isAuthenticated, async (_req, res) => {
     res.json(await storage.getOrders());
   });
@@ -183,26 +205,6 @@ export async function registerRoutes(
     isAuthenticated,
     async (req, res) => {
       const result = await storage.updateOrderStatus(
-        Number(req.params.id),
-        req.body.status,
-      );
-      res.json(result);
-    },
-  );
-
-  app.get(
-    api.admin.reservations.list.path,
-    isAuthenticated,
-    async (_req, res) => {
-      res.json(await storage.getReservations());
-    },
-  );
-
-  app.patch(
-    api.admin.reservations.updateStatus.path,
-    isAuthenticated,
-    async (req, res) => {
-      const result = await storage.updateReservationStatus(
         Number(req.params.id),
         req.body.status,
       );

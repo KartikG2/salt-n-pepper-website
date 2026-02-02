@@ -1,6 +1,13 @@
 import { restaurant } from "@/config/restaurant";
 import { Link } from "wouter";
-import { Facebook, Instagram, MapPin, Phone, Clock } from "lucide-react";
+import {
+  Facebook,
+  Instagram,
+  MapPin,
+  Phone,
+  Clock,
+  ExternalLink,
+} from "lucide-react";
 
 export function Footer() {
   return (
@@ -17,14 +24,20 @@ export function Footer() {
             </p>
             <div className="flex space-x-4 pt-2">
               <a
-                href="#"
+                href={restaurant.social.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="p-2 bg-white/10 rounded-full hover:bg-primary hover:text-white transition-colors"
+                aria-label="Facebook"
               >
                 <Facebook className="w-5 h-5" />
               </a>
               <a
-                href="#"
+                href={restaurant.social.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="p-2 bg-white/10 rounded-full hover:bg-primary hover:text-white transition-colors"
+                aria-label="Instagram"
               >
                 <Instagram className="w-5 h-5" />
               </a>
@@ -33,7 +46,7 @@ export function Footer() {
 
           {/* Quick Links */}
           <div className="space-y-4">
-            <h4 className="text-lg font-bold text-primary">Explore</h4>
+            <h4 className="text-lg font-bold text-primary italic">Explore</h4>
             <ul className="space-y-3">
               <li>
                 <Link
@@ -72,19 +85,35 @@ export function Footer() {
 
           {/* Contact Info */}
           <div className="space-y-4">
-            <h4 className="text-lg font-bold text-primary">Visit Us</h4>
-            <div className="space-y-3 text-muted-foreground/80">
-              <div className="flex items-start space-x-3">
+            <h4 className="text-lg font-bold text-primary italic">Visit Us</h4>
+            <div className="space-y-4 text-muted-foreground/80">
+              {/* Functional Map Link */}
+              <a
+                href={restaurant.directionsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start space-x-3 group hover:text-primary transition-colors"
+              >
                 <MapPin className="w-5 h-5 text-primary shrink-0 mt-1" />
-                <span>{restaurant.address}</span>
-              </div>
-              <div className="flex items-center space-x-3">
+                <span className="text-sm leading-relaxed">
+                  {restaurant.address}
+                  <span className="inline-flex ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
+                </span>
+              </a>
+
+              <a
+                href={`tel:${restaurant.phone.replace(/\s/g, "")}`}
+                className="flex items-center space-x-3 hover:text-primary transition-colors"
+              >
                 <Phone className="w-5 h-5 text-primary shrink-0" />
-                <span>{restaurant.phone}</span>
-              </div>
+                <span className="text-sm font-mono">{restaurant.phone}</span>
+              </a>
+
               <div className="flex items-start space-x-3">
                 <Clock className="w-5 h-5 text-primary shrink-0 mt-1" />
-                <div>
+                <div className="text-sm">
                   <p>Mon-Fri: {restaurant.hours.weekdays}</p>
                   <p>Sat-Sun: {restaurant.hours.weekends}</p>
                 </div>
