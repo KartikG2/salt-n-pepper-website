@@ -13,7 +13,8 @@ export const restaurant = {
     instagram: "#",
     google: "#"
   },
-  locationUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3846.685376783856!2d75.6324!3d15.4215!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb8db1c0738a53b%3A0x6b8d4f489f023738!2sSalt%20N%20Papper!5e0!3m2!1sen!2sin!4v1625637281234!5m2!1sen!2sin",
+  locationUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3846.6853767838563!2d75.62718!3d15.42236!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb8ce4c61edbf9f%3A0x5c4f4ea1c7c1e6a5!2sKSRDC%20Industrial%20Estate%2C%20Hatalgeri%20Rd%2C%20Naka%2C%20Gadag-Betageri%2C%20Karnataka%20582101!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin",
+  directionsUrl: "https://www.google.com/maps/dir/?api=1&destination=KSRDC+Industrial+Estate,+Hatalgeri+Rd,+Naka,+Gadag-Betageri,+Karnataka+582101",
   features: [
     { title: "Pure Veg", icon: "Leaf", description: "100% Vegetarian Menu" },
     { title: "Family Ambience", icon: "Users", description: "Perfect for family gatherings" },
