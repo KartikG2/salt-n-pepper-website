@@ -97,6 +97,7 @@ export default function Dashboard() {
     categoryId: 0,
     isVegetarian: true,
     isAvailable: true,
+    imageUrl: "",
   });
 
   useEffect(() => {
@@ -124,7 +125,7 @@ export default function Dashboard() {
         categoryId: item.categoryId,
         isVegetarian: item.isVegetarian,
         isAvailable: item.isAvailable,
-        imageUrl: item.imageUrl,
+        imageUrl: item.imageUrl || "",
       });
       setItemPrices(item.prices as ItemPrices);
     } else {
@@ -135,6 +136,7 @@ export default function Dashboard() {
         categoryId: categories?.[0]?.id || 0,
         isVegetarian: true,
         isAvailable: true,
+        imageUrl: "",
       });
       setItemPrices({ full: 0, half: 0, quarter: 0 });
     }
@@ -428,20 +430,28 @@ export default function Dashboard() {
                               key={item.id}
                               className="flex items-center justify-between p-3 rounded-lg bg-muted/30 group"
                             >
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <Leaf
-                                    className={`w-3 h-3 ${item.isVegetarian ? "text-green-600" : "text-red-600"}`}
+                              <div className="flex items-center gap-4">
+                                {item.imageUrl && (
+                                  <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    className="w-10 h-10 rounded-md object-cover border"
                                   />
-                                  <span className="font-medium">
-                                    {item.name}
+                                )}
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <Leaf
+                                      className={`w-3 h-3 ${item.isVegetarian ? "text-green-600" : "text-red-600"}`}
+                                    />
+                                    <span className="font-medium">
+                                      {item.name}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    F: ₹{prices.full} | H: ₹{prices.half || 0} |
+                                    Q: ₹{prices.quarter || 0}
                                   </span>
                                 </div>
-                                {/* FIXED: Rendering properties to avoid Error #31 */}
-                                <span className="text-[10px] text-muted-foreground">
-                                  F: ₹{prices.full} | H: ₹{prices.half || 0} |
-                                  Q: ₹{prices.quarter || 0}
-                                </span>
                               </div>
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button
@@ -481,7 +491,7 @@ export default function Dashboard() {
                     </span>
                     <Badge
                       variant="secondary"
-                      className="text-green-700 font-bold"
+                      className="text-white-700 font-bold"
                     >
                       Total Revenue: ₹{groupedHistory[label].totalRevenue}
                     </Badge>
@@ -507,7 +517,6 @@ export default function Dashboard() {
                                 </span>
                               </td>
                               <td className="p-4 text-xs">
-                                {/* UPDATED: History now includes portion names */}
                                 {(o.items as any[]).map((item, idx) => (
                                   <div key={idx}>
                                     {item.quantity}x {item.name}{" "}
@@ -546,6 +555,22 @@ export default function Dashboard() {
                 }
               />
             </div>
+
+            {/* Image URL Section */}
+            <div>
+              <Label>Image URL</Label>
+              <Input
+                value={itemData.imageUrl || ""}
+                placeholder="https://images.unsplash.com/photo-..."
+                onChange={(e) =>
+                  setItemData({ ...itemData, imageUrl: e.target.value })
+                }
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Paste a link from Unsplash or Google Images.
+              </p>
+            </div>
+
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-[10px]">Full (₹)</Label>
