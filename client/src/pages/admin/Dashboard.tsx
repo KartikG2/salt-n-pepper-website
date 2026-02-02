@@ -68,7 +68,6 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Fixes "Expected 0 arguments, but got 1"
   const { data: orders } = useAdminOrders({ refetchInterval: 5000 });
   const { data: reservations } = useAdminReservations({
     refetchInterval: 5000,
@@ -188,7 +187,7 @@ export default function Dashboard() {
 
   const handleAddCategory = () => {
     if (!newCategoryName) return;
-    // Fixes "Argument of type '{ name: string; }' is not assignable"
+    // CRITICAL FIX: Ensure slug is generated to satisfy the database schema
     createCategory.mutate(
       {
         name: newCategoryName,
@@ -199,6 +198,7 @@ export default function Dashboard() {
         onSuccess: () => {
           setNewCategoryOpen(false);
           setNewCategoryName("");
+          toast({ title: "Success", description: "Category added" });
         },
       },
     );
@@ -332,6 +332,7 @@ export default function Dashboard() {
             </div>
           </TabsContent>
 
+          {/* ... Reservations tab remains the same ... */}
           <TabsContent value="reservations">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {reservations
@@ -518,7 +519,6 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {/* Fixes "type boolean | null | undefined is not assignable" */}
                       <input
                         type="checkbox"
                         id="avail"
@@ -621,6 +621,7 @@ export default function Dashboard() {
             </div>
           </TabsContent>
 
+          {/* ... History tab remains the same ... */}
           <TabsContent value="history">
             <ScrollArea className="h-[70vh]">
               {Object.keys(groupedHistory).map((label) => (

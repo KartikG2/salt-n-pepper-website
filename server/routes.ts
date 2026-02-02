@@ -12,7 +12,6 @@ import { type ItemPrices } from "@shared/schema";
 
 const scryptAsync = promisify(scrypt);
 
-// === AUTH UTILS ===
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
@@ -32,7 +31,6 @@ export async function registerRoutes(
 ): Promise<Server> {
   app.set("trust proxy", 1);
 
-  // === AUTH SETUP ===
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "salt-n-papper-secret",
@@ -80,35 +78,12 @@ export async function registerRoutes(
     res.status(401).json({ message: "Unauthorized" });
   };
 
-  // === SEED DATA UPDATED FOR PORTIONS ===
+  // === SEED DATA ===
   (async () => {
     const existingUser = await storage.getUserByUsername("admin");
     if (!existingUser) {
       const hashedPassword = await hashPassword("admin123");
       await storage.createUser({ username: "admin", password: hashedPassword });
-    }
-
-    const categories = await storage.getCategories();
-    if (categories.length === 0) {
-      const cat1 = await storage.createCategory({
-        name: "Starters",
-        slug: "starters",
-        sortOrder: 1,
-      });
-
-      // Updated seed data to use the 'prices' object instead of a single 'price'
-      await storage.createMenuItem({
-        categoryId: cat1.id,
-        name: "Paneer Tikka",
-        // Using the new JSONB structure
-        prices: { full: 280, half: 160, quarter: 90 } as ItemPrices,
-        description: "Charcoal grilled cottage cheese",
-        isVegetarian: true,
-        isAvailable: true,
-        imageUrl:
-          "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=800",
-      });
-      console.log("Database seeded with portion data.");
     }
   })();
 
@@ -125,6 +100,19 @@ export async function registerRoutes(
     try {
       const input = api.orders.create.input.parse(req.body);
       const result = await storage.createOrder(input);
+      res.status(201).json(result);
+    } catch (err) {
+      if (err instanceof z.ZodError)
+        return res.status(400).json({ message: err.errors[0].message });
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  });
+
+  // FIXED: Added missing Reservation creation route
+  app.post(api.reservations.create.path, async (req, res) => {
+    try {
+      const input = api.reservations.create.input.parse(req.body);
+      const result = await storage.createReservation(input);
       res.status(201).json(result);
     } catch (err) {
       if (err instanceof z.ZodError)
@@ -156,7 +144,30 @@ export async function registerRoutes(
 
   // === PROTECTED ADMIN ROUTES ===
 
-  // NEW: Update existing menu item (The "Edit" functionality)
+  // FIXED: Ensure Categories can be added from the Dashboard
+  app.post(
+    api.admin.categories.create.path,
+    isAuthenticated,
+    async (req, res) => {
+      try {
+        const result = await storage.createCategory(req.body);
+        res.status(201).json(result);
+      } catch (err) {
+        res.status(500).json({ message: "Failed to create category" });
+      }
+    },
+  );
+
+  // FIXED: Category deletion
+  app.delete(
+    api.admin.categories.delete.path,
+    isAuthenticated,
+    async (req, res) => {
+      await storage.deleteCategory(Number(req.params.id));
+      res.sendStatus(204);
+    },
+  );
+
   app.patch(
     api.admin.menuItems.update.path,
     isAuthenticated,
@@ -173,7 +184,6 @@ export async function registerRoutes(
     },
   );
 
-  // Create new menu item
   app.post(
     api.admin.menuItems.create.path,
     isAuthenticated,
@@ -205,6 +215,27 @@ export async function registerRoutes(
     isAuthenticated,
     async (req, res) => {
       const result = await storage.updateOrderStatus(
+        Number(req.params.id),
+        req.body.status,
+      );
+      res.json(result);
+    },
+  );
+
+  // FIXED: Added missing Reservation admin routes
+  app.get(
+    api.admin.reservations.list.path,
+    isAuthenticated,
+    async (_req, res) => {
+      res.json(await storage.getReservations());
+    },
+  );
+
+  app.patch(
+    api.admin.reservations.updateStatus.path,
+    isAuthenticated,
+    async (req, res) => {
+      const result = await storage.updateReservationStatus(
         Number(req.params.id),
         req.body.status,
       );
