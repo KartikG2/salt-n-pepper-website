@@ -39,9 +39,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Loader2,
   LogOut,
-  Clock,
   Volume2,
-  Printer,
   Phone,
   CalendarCheck,
   Users,
@@ -55,7 +53,6 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, isToday, isYesterday } from "date-fns";
 import {
-  type OrderItem,
   type InsertMenuItem,
   type MenuItem,
   type ItemPrices,
@@ -84,8 +81,6 @@ export default function Dashboard() {
   const deleteCategory = useDeleteCategoryAdmin();
 
   const prevOrdersCount = useRef<number>(0);
-  const prevResCount = useRef<number>(0);
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newCategoryOpen, setNewCategoryOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -106,13 +101,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const pendingOrders = orders?.filter((o) => o.status === "pending") || [];
-    const pendingRes =
-      reservations?.filter((r) => r.status === "pending") || [];
-
-    if (
-      pendingOrders.length > prevOrdersCount.current ||
-      pendingRes.length > prevResCount.current
-    ) {
+    if (pendingOrders.length > prevOrdersCount.current) {
       new Audio(
         "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3",
       )
@@ -120,8 +109,7 @@ export default function Dashboard() {
         .catch(() => {});
     }
     prevOrdersCount.current = pendingOrders.length;
-    prevResCount.current = pendingRes.length;
-  }, [orders, reservations]);
+  }, [orders]);
 
   useEffect(() => {
     if (!isLoading && !user) setLocation("/admin");
@@ -162,9 +150,7 @@ export default function Dashboard() {
       });
       return;
     }
-
     const payload = { ...itemData, prices: itemPrices };
-
     if (editingItem) {
       updateMenuItem.mutate(
         { id: editingItem.id, ...payload },
@@ -187,7 +173,6 @@ export default function Dashboard() {
 
   const handleAddCategory = () => {
     if (!newCategoryName) return;
-    // CRITICAL FIX: Ensure slug is generated to satisfy the database schema
     createCategory.mutate(
       {
         name: newCategoryName,
@@ -292,8 +277,7 @@ export default function Dashboard() {
                         {order.customerName}
                       </h3>
                       <p className="text-xs text-muted-foreground flex items-center gap-1 mb-4">
-                        <Phone className="w-3 h-3" />
-                        {order.customerPhone}
+                        <Phone className="w-3 h-3" /> {order.customerPhone}
                       </p>
                       <div className="space-y-1 border-t border-dashed pt-3 text-sm">
                         {(order.items as any[]).map((item, i) => (
@@ -332,7 +316,6 @@ export default function Dashboard() {
             </div>
           </TabsContent>
 
-          {/* ... Reservations tab remains the same ... */}
           <TabsContent value="reservations">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {reservations
@@ -421,136 +404,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingItem ? "Edit Item" : "Add Item"}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div>
-                      <Label>Name *</Label>
-                      <Input
-                        value={itemData.name || ""}
-                        onChange={(e) =>
-                          setItemData({ ...itemData, name: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <Label className="text-[10px]">Full (₹)</Label>
-                        <Input
-                          type="number"
-                          value={itemPrices.full}
-                          onChange={(e) =>
-                            setItemPrices({
-                              ...itemPrices,
-                              full: Number(e.target.value),
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-[10px]">Half (₹)</Label>
-                        <Input
-                          type="number"
-                          value={itemPrices.half || 0}
-                          onChange={(e) =>
-                            setItemPrices({
-                              ...itemPrices,
-                              half: Number(e.target.value),
-                            })
-                          }
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-[10px]">Quarter (₹)</Label>
-                        <Input
-                          type="number"
-                          value={itemPrices.quarter || 0}
-                          onChange={(e) =>
-                            setItemPrices({
-                              ...itemPrices,
-                              quarter: Number(e.target.value),
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Category</Label>
-                        <Select
-                          value={itemData.categoryId?.toString()}
-                          onValueChange={(v) =>
-                            setItemData({ ...itemData, categoryId: Number(v) })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories?.map((c) => (
-                              <SelectItem key={c.id} value={c.id.toString()}>
-                                {c.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <Label>Type</Label>
-                        <Button
-                          variant={
-                            itemData.isVegetarian ? "default" : "outline"
-                          }
-                          className="w-full"
-                          onClick={() =>
-                            setItemData({
-                              ...itemData,
-                              isVegetarian: !itemData.isVegetarian,
-                            })
-                          }
-                        >
-                          {itemData.isVegetarian ? "Veg" : "Non-Veg"}
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id="avail"
-                        checked={!!itemData.isAvailable}
-                        onChange={(e) =>
-                          setItemData({
-                            ...itemData,
-                            isAvailable: e.target.checked,
-                          })
-                        }
-                      />
-                      <Label htmlFor="avail">Available for ordering</Label>
-                    </div>
-                    <Textarea
-                      placeholder="Description"
-                      value={itemData.description || ""}
-                      onChange={(e) =>
-                        setItemData({
-                          ...itemData,
-                          description: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button className="w-full" onClick={handleSaveItem}>
-                      Save Changes
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
               <div className="space-y-6">
                 {categories?.map((cat) => (
                   <Card key={cat.id}>
@@ -568,52 +421,49 @@ export default function Dashboard() {
                     <CardContent className="space-y-2">
                       {menuItems
                         ?.filter((i) => i.categoryId === cat.id)
-                        .map((item) => (
-                          <div
-                            key={item.id}
-                            className={`flex items-center justify-between p-3 rounded-lg group ${item.isAvailable ? "bg-muted/30" : "bg-red-50 opacity-70"}`}
-                          >
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <Leaf
-                                  className={`w-3 h-3 ${item.isVegetarian ? "text-green-600" : "text-red-600"}`}
-                                />
-                                <span className="font-medium">{item.name}</span>
-                                {!item.isAvailable && (
-                                  <Badge
-                                    variant="destructive"
-                                    className="text-[8px] h-4"
-                                  >
-                                    OUT OF STOCK
-                                  </Badge>
-                                )}
+                        .map((item) => {
+                          const prices = item.prices as ItemPrices;
+                          return (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between p-3 rounded-lg bg-muted/30 group"
+                            >
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <Leaf
+                                    className={`w-3 h-3 ${item.isVegetarian ? "text-green-600" : "text-red-600"}`}
+                                  />
+                                  <span className="font-medium">
+                                    {item.name}
+                                  </span>
+                                </div>
+                                {/* FIXED: Rendering properties to avoid Error #31 */}
+                                <span className="text-[10px] text-muted-foreground">
+                                  F: ₹{prices.full} | H: ₹{prices.half || 0} |
+                                  Q: ₹{prices.quarter || 0}
+                                </span>
                               </div>
-                              <span className="text-[10px] text-muted-foreground">
-                                F: ₹{(item.prices as ItemPrices).full} | H: ₹
-                                {(item.prices as ItemPrices).half || 0} | Q: ₹
-                                {(item.prices as ItemPrices).quarter || 0}
-                              </span>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => openItemDialog(item)}
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive h-8 w-8"
+                                  onClick={() => deleteMenuItem.mutate(item.id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
                             </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => openItemDialog(item)}
-                              >
-                                <Edit3 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive h-8 w-8"
-                                onClick={() => deleteMenuItem.mutate(item.id)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                     </CardContent>
                   </Card>
                 ))}
@@ -621,7 +471,6 @@ export default function Dashboard() {
             </div>
           </TabsContent>
 
-          {/* ... History tab remains the same ... */}
           <TabsContent value="history">
             <ScrollArea className="h-[70vh]">
               {Object.keys(groupedHistory).map((label) => (
@@ -643,7 +492,7 @@ export default function Dashboard() {
                         <thead className="bg-muted/50 border-b">
                           <tr>
                             <th className="p-4 text-left">Customer</th>
-                            <th className="p-4 text-left">Type</th>
+                            <th className="p-4 text-left">Order Details</th>
                             <th className="p-4 text-right">Total</th>
                           </tr>
                         </thead>
@@ -657,8 +506,14 @@ export default function Dashboard() {
                                   {o.customerPhone}
                                 </span>
                               </td>
-                              <td className="p-4 uppercase text-[10px]">
-                                {o.type}
+                              <td className="p-4 text-xs">
+                                {/* UPDATED: History now includes portion names */}
+                                {(o.items as any[]).map((item, idx) => (
+                                  <div key={idx}>
+                                    {item.quantity}x {item.name}{" "}
+                                    {item.portion ? `(${item.portion})` : ""}
+                                  </div>
+                                ))}
                               </td>
                               <td className="p-4 text-right font-bold">
                                 ₹{o.totalAmount}
@@ -675,6 +530,124 @@ export default function Dashboard() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Edit Item" : "Add Item"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Name *</Label>
+              <Input
+                value={itemData.name || ""}
+                onChange={(e) =>
+                  setItemData({ ...itemData, name: e.target.value })
+                }
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-[10px]">Full (₹)</Label>
+                <Input
+                  type="number"
+                  value={itemPrices.full}
+                  onChange={(e) =>
+                    setItemPrices({
+                      ...itemPrices,
+                      full: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-[10px]">Half (₹)</Label>
+                <Input
+                  type="number"
+                  value={itemPrices.half || 0}
+                  onChange={(e) =>
+                    setItemPrices({
+                      ...itemPrices,
+                      half: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label className="text-[10px]">Quarter (₹)</Label>
+                <Input
+                  type="number"
+                  value={itemPrices.quarter || 0}
+                  onChange={(e) =>
+                    setItemPrices({
+                      ...itemPrices,
+                      quarter: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Category</Label>
+              <Select
+                value={itemData.categoryId?.toString()}
+                onValueChange={(v) =>
+                  setItemData({ ...itemData, categoryId: Number(v) })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories?.map((c) => (
+                    <SelectItem key={c.id} value={c.id.toString()}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Type</Label>
+              <Button
+                variant={itemData.isVegetarian ? "default" : "outline"}
+                className="w-full"
+                onClick={() =>
+                  setItemData({
+                    ...itemData,
+                    isVegetarian: !itemData.isVegetarian,
+                  })
+                }
+              >
+                {itemData.isVegetarian ? "Veg" : "Non-Veg"}
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="avail"
+                checked={!!itemData.isAvailable}
+                onChange={(e) =>
+                  setItemData({ ...itemData, isAvailable: e.target.checked })
+                }
+              />
+              <Label htmlFor="avail">Available for ordering</Label>
+            </div>
+            <Textarea
+              placeholder="Description"
+              value={itemData.description || ""}
+              onChange={(e) =>
+                setItemData({ ...itemData, description: e.target.value })
+              }
+            />
+          </div>
+          <DialogFooter>
+            <Button className="w-full" onClick={handleSaveItem}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
