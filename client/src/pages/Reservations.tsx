@@ -75,10 +75,10 @@ export default function Reservations() {
             className="absolute inset-0 w-full h-full object-cover opacity-70"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent p-12 flex flex-col justify-center text-white">
-            <h2 className="text-5xl font-display font-bold mb-6">
+            <h2 className="text-5xl font-display font-bold mb-6 text-white-700">
               Book Your Table
             </h2>
-            <p className="text-xl max-w-md leading-relaxed text-orange-700 opacity-90">
+            <p className="text-xl max-w-md leading-relaxed opacity-90">
               Enjoy a memorable dining experience with your loved ones. Reserve
               a spot to avoid waiting.
             </p>
