@@ -1,0 +1,100 @@
+You are a senior full-stack engineer and build-system expert.
+
+Goal:
+Refactor the existing Replit project into a clean, production-ready structure
+WITHOUT breaking any existing functionality, builds, or runtime behavior.
+
+CRITICAL RULES (MUST FOLLOW):
+- Do NOT delete any files
+- Do NOT change business logic
+- Do NOT change API behavior
+- The app must work exactly as before after refactor
+- Only reorganize directories and fix import paths where required
+- Ensure frontend and backend can still run independently
+- shared/ must NOT be deployed separately
+
+TARGET DIRECTORY STRUCTURE:
+
+root/
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   ├── index.html
+│   ├── requirements.md
+│   ├── vite.config.ts
+│   ├── tailwind.config.ts
+│   ├── postcss.config.js
+│   └── components.json
+│
+├── backend/
+│   ├── db.ts
+│   ├── index.ts
+│   ├── routes.ts
+│   ├── static.ts
+│   ├── storage.ts
+│   ├── vite.ts
+│   └── drizzle.config.ts
+│
+├── shared/
+│   ├── routes.ts
+│   └── schema.ts
+│
+├── scripts/
+│   └── build.ts
+│
+├── docs/
+│   ├── replit.md
+│   └── .replit
+│
+├── assets/
+│
+├── .gitignore
+├── package.json
+├── package-lock.json
+└── tsconfig.json
+
+FILE MOVEMENT RULES:
+
+Frontend:
+- Move `client/public` → `frontend/public`
+- Move `client/src` → `frontend/src`
+- Move `client/index.html` → `frontend/index.html`
+- Move `client/requirements.md` → `frontend/requirements.md`
+- Move `components.json` → `frontend/components.json`
+- Move `vite.config.ts` → `frontend/vite.config.ts`
+- Move `tailwind.config.ts` → `frontend/tailwind.config.ts`
+- Move `postcss.config.js` → `frontend/postcss.config.js`
+
+Backend:
+- Move all files from `server/` → `backend/`
+- Move `drizzle.config.ts` → `backend/drizzle.config.ts`
+
+Shared:
+- Keep `shared/` at root
+- Ensure both frontend and backend can import from `shared/`
+
+Scripts:
+- Move `script/build.ts` → `scripts/build.ts`
+
+Docs:
+- Move `replit.md` → `docs/replit.md`
+- Move `.replit` → `docs/.replit`
+
+Assets:
+- Move everything from `attached_assets/` → `assets/`
+
+IMPORT & CONFIG FIXES (MANDATORY):
+- Update relative imports so builds succeed
+- Add a path alias for shared in root `tsconfig.json`:
+  "@shared/*" → "shared/*"
+- Ensure Vite and backend TypeScript both resolve `@shared/*`
+- Do NOT introduce breaking changes
+
+FINAL CHECKS:
+- Frontend build must succeed
+- Backend must start successfully
+- shared/ must be used only as an internal library
+- Output the final directory tree
+- Confirm that functionality remains unchanged
+
+Proceed carefully and execute the refactor.
